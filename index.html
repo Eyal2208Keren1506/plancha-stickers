@@ -29,7 +29,7 @@
   #info{font-size:13px;color:#333;margin:6px 0 12px;font-weight:600}
   .sheet{background:#fff;border:1px solid var(--bd);padding:var(--mpad);display:flex;flex-wrap:wrap;gap:var(--gap);align-content:flex-start;width:var(--pw);min-height:var(--ph);margin:0 auto;box-shadow:0 1px 6px rgba(0,0,0,.12)}
   .st{width:var(--lw);height:var(--lh);display:flex;align-items:center;justify-content:center;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
-  .st img{width:100%;height:100%;object-fit:contain}
+  .st img{width:100%;height:100%;object-fit:var(--fit,contain)}
   .vacio{color:#999;padding:20px;text-align:center;width:100%}
   @media print{header,.no-print{display:none!important}.wrap{max-width:none;padding:0;margin:0}.panel{display:none}
     #hp{display:block!important;border:none;box-shadow:none;padding:0;margin:0}.sheet{box-shadow:none;border:none;width:auto;min-height:auto;margin:0;padding:var(--mpad)}}
@@ -52,16 +52,29 @@
   </div>
 
   <div class="panel no-print">
-    <label class="lbl">2) Tamaño y hoja</label>
+    <label class="lbl">2) Cómo llenar la hoja</label>
     <div class="ctrls">
-      <div class="campo"><label class="lbl">Ancho (mm)</label><input type="number" id="lw" value="40" min="10" max="200" onchange="render()"></div>
-      <div class="campo"><label class="lbl">Alto (mm)</label><input type="number" id="lh" value="40" min="10" max="200" onchange="render()"></div>
-      <div class="campo" style="align-self:center"><label class="lbl">&nbsp;</label><label style="font-weight:600;font-size:13px"><input type="checkbox" id="prop" checked onchange="aplicarProp()"> Mantener proporción de la imagen</label></div>
-      <div class="campo"><label class="lbl">Separación (mm)</label><input type="number" id="gap" value="3" min="0" max="20" step="0.5" onchange="render()"></div>
-      <div class="campo"><label class="lbl">Margen (mm)</label><input type="number" id="margin" value="8" min="0" max="25" step="0.5" onchange="render()"></div>
-      <div class="campo"><label class="lbl">Orientación</label><select id="orient" onchange="render()"><option value="portrait">Vertical</option><option value="landscape">Horizontal</option></select></div>
+      <div class="campo"><label class="lbl">Modo</label>
+        <select id="modo" onchange="toggleModo()">
+          <option value="grid" selected>Cuadrícula (columnas × filas)</option>
+          <option value="mm">Tamaño en mm</option>
+        </select></div>
+      <div class="campo gridonly"><label class="lbl">Columnas</label><input type="number" id="cols" value="2" min="1" max="12" onchange="render()"></div>
+      <div class="campo gridonly"><label class="lbl">Filas</label><input type="number" id="rows" value="5" min="1" max="20" onchange="render()"></div>
+      <div class="campo mmonly" style="display:none"><label class="lbl">Ancho (mm)</label><input type="number" id="lw" value="40" min="10" max="200" onchange="render()"></div>
+      <div class="campo mmonly" style="display:none"><label class="lbl">Alto (mm)</label><input type="number" id="lh" value="40" min="10" max="200" onchange="render()"></div>
+      <div class="campo mmonly" style="display:none;align-self:center"><label class="lbl">&nbsp;</label><label style="font-weight:600;font-size:13px"><input type="checkbox" id="prop" checked onchange="aplicarProp()"> Mantener proporción</label></div>
+      <div class="campo mmonly" style="display:none"><label class="lbl">Separación (mm)</label><input type="number" id="gap" value="3" min="0" max="20" step="0.5" onchange="render()"></div>
+      <div class="campo mmonly" style="display:none"><label class="lbl">Margen (mm)</label><input type="number" id="margin" value="8" min="0" max="25" step="0.5" onchange="render()"></div>
+      <div class="campo"><label class="lbl">Imagen</label>
+        <select id="fit" onchange="render()">
+          <option value="fill" selected>Llenar estirando (sin bordes)</option>
+          <option value="cover">Llenar recortando (sin bordes)</option>
+          <option value="contain">Ajustar (puede dejar bordes)</option>
+        </select></div>
+      <div class="campo"><label class="lbl">Orientación</label><select id="orient" onchange="render()"><option value="portrait" selected>Vertical</option><option value="landscape">Horizontal</option></select></div>
     </div>
-    <p class="hint">Con “Mantener proporción”, el alto se ajusta solo para que NO queden márgenes. Cámbialo si quieres un tamaño exacto.</p>
+    <p class="hint">Para 10 sin bordes: <b>Cuadrícula 2 × 5</b> + Imagen “Llenar”. “Estirar” llena exacto (puede deformar un poco); “Recortar” no deforma pero corta orillas.</p>
   </div>
 
   <div class="panel" id="hp">
@@ -97,6 +110,12 @@ function fileSel(e){const f=e.target.files&&e.target.files[0];if(f)setImg(f)}
 })();
 document.addEventListener('paste',e=>{for(const it of (e.clipboardData&&e.clipboardData.items)||[]){if(it.type&&it.type.startsWith('image/')){const f=it.getAsFile();if(f){setImg(f);toast('📷 Imagen pegada');e.preventDefault()}break}}});
 
+function toggleModo(){
+  const grid=$('modo').value==='grid';
+  document.querySelectorAll('.gridonly').forEach(e=>e.style.display=grid?'':'none');
+  document.querySelectorAll('.mmonly').forEach(e=>e.style.display=grid?'none':'');
+  render();
+}
 function aplicarProp(){
   if($('prop').checked && natW && natH){
     const lw=+$('lw').value||40;
@@ -105,21 +124,28 @@ function aplicarProp(){
   } else { $('lh').disabled=false; }
   render();
 }
-
 function render(){
-  const lw=+$('lw').value||40, lh=+$('lh').value||40, gap=+$('gap').value||0, mg=+$('margin').value||0;
   const port=$('orient').value==='portrait';const A4w=port?210:297,A4h=port?297:210;
+  const grid=$('modo').value==='grid';
+  let cols,rows,lw,lh,gap,mg;
+  if(grid){
+    cols=Math.max(1,parseInt($('cols').value)||2); rows=Math.max(1,parseInt($('rows').value)||5);
+    gap=0; mg=0; lw=A4w/cols; lh=A4h/rows;
+  } else {
+    lw=+$('lw').value||40; lh=+$('lh').value||40; gap=+$('gap').value||0; mg=+$('margin').value||0;
+    cols=Math.max(1,Math.floor((A4w-2*mg+gap)/(lw+gap)));
+    rows=Math.max(1,Math.floor((A4h-2*mg+gap)/(lh+gap)));
+  }
+  const per=cols*rows;
   const S=document.documentElement.style;
   S.setProperty('--lw',lw+'mm');S.setProperty('--lh',lh+'mm');S.setProperty('--gap',gap+'mm');
   S.setProperty('--mpad',mg+'mm');S.setProperty('--pw',A4w+'mm');S.setProperty('--ph',A4h+'mm');
+  S.setProperty('--fit',$('fit').value);
   let ps=$('pagestyle');if(!ps){ps=document.createElement('style');ps.id='pagestyle';document.head.appendChild(ps)}
   ps.textContent=`@media print{@page{size:A4 ${port?'portrait':'landscape'};margin:0}}`;
-  const cols=Math.max(1,Math.floor((A4w-2*mg+gap)/(lw+gap)));
-  const rows=Math.max(1,Math.floor((A4h-2*mg+gap)/(lh+gap)));
-  const per=cols*rows;
   const sheet=$('sheet');
   if(!img){$('info').textContent='Sube una imagen para empezar.';sheet.innerHTML='<div class="vacio">Sube una imagen para ver la plancha.</div>';return}
-  $('info').textContent=`${cols} × ${rows} = ${per} stickers por página · ${lw}×${lh} mm`;
+  $('info').textContent=`${cols} × ${rows} = ${per} stickers por página · ${lw.toFixed(1)}×${lh.toFixed(1)} mm`;
   let h='';for(let i=0;i<per;i++)h+=`<div class="st"><img src="${img}"></div>`;
   sheet.innerHTML=h;
 }
