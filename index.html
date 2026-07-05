@@ -30,6 +30,8 @@
   .sheet{background:#fff;border:1px solid var(--bd);padding:var(--mpad);display:flex;flex-wrap:wrap;gap:var(--gap);align-content:flex-start;width:var(--pw);min-height:var(--ph);margin:0 auto;box-shadow:0 1px 6px rgba(0,0,0,.12)}
   .st{width:var(--lw);height:var(--lh);display:flex;align-items:center;justify-content:center;overflow:hidden;break-inside:avoid;page-break-inside:avoid}
   .st img{width:100%;height:100%;object-fit:var(--fit,contain)}
+  .sheet.grid{display:grid;gap:0;padding:0;height:var(--ph);align-content:stretch}
+  .sheet.grid .st{width:auto;height:auto}
   .vacio{color:#999;padding:20px;text-align:center;width:100%}
   @media print{header,.no-print{display:none!important}.wrap{max-width:none;padding:0;margin:0}.panel{display:none}
     #hp{display:block!important;border:none;box-shadow:none;padding:0;margin:0}.sheet{box-shadow:none;border:none;width:auto;min-height:auto;margin:0;padding:var(--mpad)}}
@@ -144,6 +146,8 @@ function render(){
   let ps=$('pagestyle');if(!ps){ps=document.createElement('style');ps.id='pagestyle';document.head.appendChild(ps)}
   ps.textContent=`@media print{@page{size:A4 ${port?'portrait':'landscape'};margin:0}}`;
   const sheet=$('sheet');
+  if(grid){ sheet.classList.add('grid'); sheet.style.gridTemplateColumns='repeat('+cols+',1fr)'; sheet.style.gridTemplateRows='repeat('+rows+',1fr)'; }
+  else { sheet.classList.remove('grid'); sheet.style.gridTemplateColumns=''; sheet.style.gridTemplateRows=''; }
   if(!img){$('info').textContent='Sube una imagen para empezar.';sheet.innerHTML='<div class="vacio">Sube una imagen para ver la plancha.</div>';return}
   $('info').textContent=`${cols} × ${rows} = ${per} stickers por página · ${lw.toFixed(1)}×${lh.toFixed(1)} mm`;
   let h='';for(let i=0;i<per;i++)h+=`<div class="st"><img src="${img}"></div>`;
